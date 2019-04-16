@@ -6,7 +6,7 @@ struct buf {
   uint refcnt;
   struct buf *prev; // LRU cache list
   struct buf *next;
-  struct buf *qnext; // disk queue
+  struct buf *qnext; // disk queue batatinha teste
   uchar data[BSIZE];
 };
 #define B_VALID 0x2  // buffer has been read from disk

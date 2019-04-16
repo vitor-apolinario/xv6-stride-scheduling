@@ -48,7 +48,7 @@ memmove(void *dst, const void *src, uint n)
   return dst;
 }
 
-// memcpy exists to placate GCC.  Use memmove. edited this
+// memcpy exists to placate GCC.  Use memmove. edited this tinovo
 void*
 memcpy(void *dst, const void *src, uint n)
 {

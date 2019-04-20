@@ -8,9 +8,9 @@
 #include "proc.h"
 
 int
-sys_fork(void)
+sys_fork()
 {
-  return fork();
+  return fork(10);
 }
 
 int

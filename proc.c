@@ -20,6 +20,12 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 
+//Generetes a randon number
+int
+rand(void){
+  return 1;
+}
+
 void
 pinit(void)
 {
@@ -184,6 +190,8 @@ fork(int tickets){
   struct proc *np;
   struct proc *curproc = myproc();
 
+  cprintf("Fork: %d tickets\n", tickets);
+
   // Allocate process.
   if((np = allocproc(tickets)) == 0){
     return -1;
@@ -322,6 +330,9 @@ wait(void)
 void
 scheduler(void)
 {
+  int avaltickets;            // soma dos tickets que podem ser sorteados
+  int luckyproc;              // o processo sorteado
+  int aux;                    // auxiliar para o sorteio
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
@@ -332,9 +343,28 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+
+    avaltickets = 0;
+
+    // se o processo pode rodar, ele pode ser sorteado
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state == RUNNABLE)
+        avaltickets += p->tickets;
+    }
+
+    luckyproc = (rand() % avaltickets) + 1;
+    aux = 0;
+
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
+
+      // a faixa de tickets é incrementada
+      aux += p->tickets;
+
+      // se o processo contido na faixa sorteada for maior 
+      // que a faixa atual, ele não é o sorteado
+      if(luckyproc > aux) continue;
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
@@ -349,6 +379,8 @@ scheduler(void)
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
+
+      break;
     }
     release(&ptable.lock);
 

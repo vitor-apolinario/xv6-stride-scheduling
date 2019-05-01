@@ -20,12 +20,6 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 
-//Generetes a randon number
-int
-rand(void){
-  return 1;
-}
-
 void
 pinit(void)
 {
@@ -184,6 +178,8 @@ growproc(int n)
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
+#define MIN 5
+#define MAX 100
 int
 fork(int tickets){
   int i, pid;
@@ -191,7 +187,15 @@ fork(int tickets){
   struct proc *curproc = myproc();
 
   cprintf("Fork: %d tickets\n", tickets);
-
+  //Check limits
+  if(tickets == 0){
+    tickets = MIN;
+  }else{
+    if(tickets > MAX)
+      tickets = MAX;
+    else if(tickets < MIN)
+      tickets = MIN;
+  }
   // Allocate process.
   if((np = allocproc(tickets)) == 0){
     return -1;
@@ -319,6 +323,16 @@ wait(void)
   }
 }
 
+//Generetes a randon number
+int 
+rand(int base, int total){
+  int new = (110351525 * base + 12345) % 2147483648;
+//  cprintf("New: %d\n", new);
+  new = new % total;
+//  cprintf("Escolhido: %d\n", new);
+  return new;
+}
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -330,8 +344,8 @@ wait(void)
 void
 scheduler(void)
 {
-  int avaltickets;            // soma dos tickets que podem ser sorteados
-  int luckyproc;              // o processo sorteado
+  uint avaltickets;            // soma dos tickets que podem ser sorteados
+  uint luckyproc = 0;              // o processo sorteado
   int aux;                    // auxiliar para o sorteio
   struct proc *p;
   struct cpu *c = mycpu();
@@ -351,8 +365,10 @@ scheduler(void)
       if(p->state == RUNNABLE)
         avaltickets += p->tickets;
     }
-
-    luckyproc = (rand() % avaltickets) + 1;
+    if(avaltickets == 0)
+      avaltickets = 1;
+//    cprintf("Base: %d | Máx: %d\n", luckyproc, avaltickets);
+    luckyproc = (rand(luckyproc, avaltickets) % avaltickets) + 1;
     aux = 0;
 
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){

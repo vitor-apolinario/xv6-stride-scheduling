@@ -5,7 +5,8 @@
 #include "user.h"
 #include "fcntl.h"
 
-char *argv[] = { "sh", 0 };
+// mudar aqui pra "sh"
+char *argv[] = { "testebrabo", 0 };
 
 int
 main(void)
@@ -27,7 +28,8 @@ main(void)
       exit();
     }
     if(pid == 0){
-      exec("sh", argv);
+      // mudar aqui pra "sh"
+      exec("testebrabo", argv);
       printf(1, "init: exec sh failed\n");
       exit();
     }

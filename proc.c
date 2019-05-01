@@ -89,6 +89,7 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
   p->tickets = tickets;
+  p->times_chosen = 0;
 
   release(&ptable.lock);
 
@@ -186,8 +187,8 @@ fork(int tickets){
   struct proc *np;
   struct proc *curproc = myproc();
 
-  cprintf("Fork: %d tickets\n", tickets);
-  //Check limits
+  // cprintf("Fork: %d tickets\n", tickets);
+  // Check limits
   if(tickets == 0){
     tickets = MIN;
   }else{
@@ -344,8 +345,8 @@ rand(int base, int total){
 void
 scheduler(void)
 {
-  uint avaltickets;            // soma dos tickets que podem ser sorteados
-  uint luckyproc = 0;              // o processo sorteado
+  uint avaltickets;           // soma dos tickets que podem ser sorteados
+  uint luckyproc = 0;         // o processo sorteado
   int aux;                    // auxiliar para o sorteio
   struct proc *p;
   struct cpu *c = mycpu();
@@ -365,11 +366,14 @@ scheduler(void)
       if(p->state == RUNNABLE)
         avaltickets += p->tickets;
     }
-    if(avaltickets == 0)
-      avaltickets = 1;
-//    cprintf("Base: %d | Máx: %d\n", luckyproc, avaltickets);
+
+    avaltickets = !avaltickets ? 1 : avaltickets;
+
+    // cprintf("Base: %d | Máx: %d\n", luckyproc, avaltickets);
     luckyproc = (rand(luckyproc, avaltickets) % avaltickets) + 1;
     aux = 0;
+    cprintf("Sorted: %d | Avaliable: %d\n", luckyproc, avaltickets);
+
 
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
@@ -385,6 +389,7 @@ scheduler(void)
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
+      p->times_chosen++;
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;

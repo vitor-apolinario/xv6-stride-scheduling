@@ -326,10 +326,10 @@ wait(void)
 
 //Generetes a randon number
 int 
-rand(int base, int total){
-  int new = (110351525 * base + 12345) % 2147483648;
+rand(int base){
+  int new = ((214013 * base + 2531011) % 2147483648)/2;
 //  cprintf("New: %d\n", new);
-  new = new % total;
+//  new = new % total;
 //  cprintf("Escolhido: %d\n", new);
   return new;
 }
@@ -347,6 +347,7 @@ scheduler(void)
 {
   uint avaltickets;           // soma dos tickets que podem ser sorteados
   uint luckyproc = 0;         // o processo sorteado
+  uint genereted = 17;
   int aux;                    // auxiliar para o sorteio
   struct proc *p;
   struct cpu *c = mycpu();
@@ -370,9 +371,10 @@ scheduler(void)
     avaltickets = !avaltickets ? 1 : avaltickets;
 
     // cprintf("Base: %d | Máx: %d\n", luckyproc, avaltickets);
-    luckyproc = (rand(luckyproc, avaltickets) % avaltickets) + 1;
+    genereted = rand(genereted);
+    luckyproc = genereted % avaltickets + 1;
     aux = 0;
-    cprintf("Sorted: %d | Avaliable: %d\n", luckyproc, avaltickets);
+    //cprintf("Sorted: %d | Avaliable: %d\n", luckyproc, avaltickets);
 
 
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
@@ -393,7 +395,7 @@ scheduler(void)
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
-      cprintf("RODANDO | PID: %d | Tickets: %d\n", p->pid, p->tickets);
+//      cprintf("RODANDO | PID: %d | Tickets: %d\n", p->pid, p->tickets);
       swtch(&(c->scheduler), p->context);
       switchkvm();
 
@@ -576,7 +578,7 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    cprintf("%d %s %s", p->pid, state, p->name);
+    cprintf("%d %s %d %d", p->pid, state, p->tickets, p->times_chosen);
     if(p->state == SLEEPING){
       getcallerpcs((uint*)p->context->ebp+2, pc);
       for(i=0; i<10 && pc[i] != 0; i++)

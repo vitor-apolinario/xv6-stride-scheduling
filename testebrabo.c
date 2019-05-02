@@ -6,22 +6,16 @@ void
 ocupacpu(void)
 {
     int i, pid;
-
-    pid = fork(10);
-    pid = fork(20);
-    pid = fork(5);
-    pid = fork(25);
-    pid = fork(40);
-
-    if(!pid)
-        for(i=0; i < 50; i++)
-            //printf(1, "%d\n", i);
+    for(i = 1; i < 4; i++){
+        pid = fork(i*10);
+        if(pid == 0)
+            for(;;);
+}            
     exit();
 }
 
 int
-main()
-{
+main(){
     ocupacpu();
     exit();
 }

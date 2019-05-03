@@ -10,7 +10,7 @@ ocupacpu(void)
         pid = fork(i*10);
         if(pid == 0)
             for(;;);
-}            
+    }            
     exit();
 }
 

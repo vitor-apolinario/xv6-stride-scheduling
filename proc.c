@@ -325,7 +325,7 @@ wait(void)
 void
 scheduler(void)
 {
-  int menorstride, menorpid;           // soma dos tickets que podem ser sorteados
+  int menorstride, menorpid;           // usados para encontrar o processo à ser escalonado
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
@@ -339,7 +339,7 @@ scheduler(void)
 
     
 
-    // se o processo pode rodar, ele pode ser sorteado
+    // busca o processo com o menor stride e seu pid
     for(p = ptable.proc, menorstride = 0, menorpid = -1; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE) continue;
 

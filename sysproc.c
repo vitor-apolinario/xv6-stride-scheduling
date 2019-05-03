@@ -7,13 +7,25 @@
 #include "mmu.h"
 #include "proc.h"
 
+#define MIN 5
+#define MAX 100
 int
 sys_fork()
 {
-  int value;
-  if(argint(0, &value) < 0)
+  int tickets;
+  if(argint(0, &tickets) < 0)
     return -1;
-  return fork(value);
+
+  if(tickets == 0){
+    tickets = MIN;
+  }else{
+    if(tickets > MAX)
+      tickets = MAX;
+    else if(tickets < MIN)
+      tickets = MIN;
+  }
+
+  return fork(tickets);
 }
 
 int

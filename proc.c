@@ -89,7 +89,9 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
   p->tickets = tickets;
+  p->stride = 0;
   p->times_chosen = 0;
+
 
   release(&ptable.lock);
 
@@ -179,24 +181,12 @@ growproc(int n)
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
-#define MIN 5
-#define MAX 100
 int
 fork(int tickets){
   int i, pid;
   struct proc *np;
   struct proc *curproc = myproc();
 
-  // cprintf("Fork: %d tickets\n", tickets);
-  // Check limits
-  if(tickets == 0){
-    tickets = MIN;
-  }else{
-    if(tickets > MAX)
-      tickets = MAX;
-    else if(tickets < MIN)
-      tickets = MIN;
-  }
   // Allocate process.
   if((np = allocproc(tickets)) == 0){
     return -1;
@@ -324,16 +314,6 @@ wait(void)
   }
 }
 
-//Generetes a randon number
-int 
-rand(int base){
-  int new = ((214013 * base + 2531011) % 2147483648)/2;
-//  cprintf("New: %d\n", new);
-//  new = new % total;
-//  cprintf("Escolhido: %d\n", new);
-  return new;
-}
-
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -345,10 +325,7 @@ rand(int base){
 void
 scheduler(void)
 {
-  uint avaltickets;           // soma dos tickets que podem ser sorteados
-  uint luckyproc = 0;         // o processo sorteado
-  uint genereted = 17;
-  int aux;                    // auxiliar para o sorteio
+  int menorstride, menorpid;           // soma dos tickets que podem ser sorteados
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
@@ -360,42 +337,33 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
 
-    avaltickets = 0;
+    
 
     // se o processo pode rodar, ele pode ser sorteado
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state == RUNNABLE)
-        avaltickets += p->tickets;
+    for(p = ptable.proc, menorstride = 0, menorpid = -1; p < &ptable.proc[NPROC]; p++){
+      if(p->state != RUNNABLE) continue;
+
+      if(menorpid == -1){          
+        menorpid    = p->pid;
+        menorstride = p->stride;
+      }else if(p->stride < menorstride){
+        menorpid    = p->pid;
+        menorstride = p->stride;
+      }        
+
     }
 
-    avaltickets = !avaltickets ? 1 : avaltickets;
-
-    // cprintf("Base: %d | Máx: %d\n", luckyproc, avaltickets);
-    genereted = rand(genereted);
-    luckyproc = genereted % avaltickets + 1;
-    aux = 0;
-    //cprintf("Sorted: %d | Avaliable: %d\n", luckyproc, avaltickets);
-
-
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
-
-      // a faixa de tickets é incrementada
-      aux += p->tickets;
-
-      // se o processo contido na faixa sorteada for maior 
-      // que a faixa atual, ele não é o sorteado
-      if(luckyproc > aux) continue;
+      if(p->pid != menorpid) continue; 
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
+      p->stride += 10000 / p->tickets;
       p->times_chosen++;
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
-//      cprintf("RODANDO | PID: %d | Tickets: %d\n", p->pid, p->tickets);
       swtch(&(c->scheduler), p->context);
       switchkvm();
 
@@ -578,7 +546,7 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    cprintf("%d %s %d %d", p->pid, state, p->tickets, p->times_chosen);
+    cprintf("%d %s tkts:%d strides:%d esc:%d", p->pid, state, p->tickets,p->stride, p->times_chosen);
     if(p->state == SLEEPING){
       getcallerpcs((uint*)p->context->ebp+2, pc);
       for(i=0; i<10 && pc[i] != 0; i++)

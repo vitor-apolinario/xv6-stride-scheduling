@@ -325,7 +325,7 @@ wait(void)
 void
 scheduler(void)
 {
-  int menorstride, menorpid;           // usados para encontrar o processo à ser escalonado
+  int flag = 1;
   struct proc *p;
   struct proc *pChosen;
   struct cpu *c = mycpu();
@@ -341,16 +341,13 @@ scheduler(void)
     
 
     // busca o processo com o menor stride e seu pid
-    for(p = ptable.proc, menorstride = 0, menorpid = -1; p < &ptable.proc[NPROC]; p++){
+    for(p = pChosen = ptable.proc, flag = -1; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE) continue;
 
-      if(menorpid == -1){          
-        menorpid    = p->pid;
-        menorstride = p->stride;
-        pChosen = p;
-      }else if(p->stride < menorstride){
-        menorpid    = p->pid;
-        menorstride = p->stride;
+      if(flag){
+        flag = 0;
+        pChosen  = p;
+      }else if(p->stride < pChosen->stride){
         pChosen = p;
       }        
     }
@@ -358,7 +355,7 @@ scheduler(void)
     // Switch to chosen process.  It is the process's job
     // to release ptable.lock and then reacquire it
     // before jumping back to us.
-    if(pChosen){
+    if(!flag){
       pChosen->stride += pChosen->nStride;
       pChosen->times_chosen++;
       c->proc = pChosen;
@@ -532,11 +529,12 @@ procdump(void)
   [RUNNING]   "run   ",
   [ZOMBIE]    "zombie"
   };
-  int i;
+  //int i;
   struct proc *p;
   char *state;
-  uint pc[10];
+  //uint pc[10];
 
+  cprintf("--------------------------DUMP--------------------------\n");
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == UNUSED)
       continue;
@@ -544,12 +542,16 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
+    
     cprintf("%d %s tkts:%d strides:%d esc:%d", p->pid, state, p->tickets,p->stride, p->times_chosen);
+    /*
     if(p->state == SLEEPING){
       getcallerpcs((uint*)p->context->ebp+2, pc);
       for(i=0; i<10 && pc[i] != 0; i++)
         cprintf(" %p", pc[i]);
     }
+    */
     cprintf("\n");
   }
+  cprintf("--------------------------------------------------------\n\n");
 }

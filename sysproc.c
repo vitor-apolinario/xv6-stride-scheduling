@@ -16,11 +16,10 @@ sys_fork()
   if(argint(0, &tickets) < 0)
     return -1;
 
-    if(tickets > MAX){
-      tickets = MAX;
-    }else if(tickets < MIN)
-      tickets = MIN;
-  
+  if(tickets > MAX){
+    tickets = MAX;
+  }else if(tickets < MIN)
+    tickets = MIN;
   return fork(tickets);
 }
 

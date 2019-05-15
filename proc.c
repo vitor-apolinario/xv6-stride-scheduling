@@ -91,7 +91,7 @@ found:
   p->tickets = tickets;
   p->stride = 0;
   p->times_chosen = 0;
-
+  p->nStride = 10000 / tickets;
 
   release(&ptable.lock);
 
@@ -327,6 +327,7 @@ scheduler(void)
 {
   int menorstride, menorpid;           // usados para encontrar o processo à ser escalonado
   struct proc *p;
+  struct proc *pChosen;
   struct cpu *c = mycpu();
   c->proc = 0;
 
@@ -346,32 +347,29 @@ scheduler(void)
       if(menorpid == -1){          
         menorpid    = p->pid;
         menorstride = p->stride;
+        pChosen = p;
       }else if(p->stride < menorstride){
         menorpid    = p->pid;
         menorstride = p->stride;
+        pChosen = p;
       }        
-
     }
-
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->pid != menorpid) continue; 
-
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      p->stride += 10000 / p->tickets;
-      p->times_chosen++;
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-      swtch(&(c->scheduler), p->context);
+    
+    // Switch to chosen process.  It is the process's job
+    // to release ptable.lock and then reacquire it
+    // before jumping back to us.
+    if(pChosen){
+      pChosen->stride += pChosen->nStride;
+      pChosen->times_chosen++;
+      c->proc = pChosen;
+      switchuvm(pChosen);
+      pChosen->state = RUNNING;
+      swtch(&(c->scheduler), pChosen->context);
       switchkvm();
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
-
-      break;
     }
     release(&ptable.lock);
 

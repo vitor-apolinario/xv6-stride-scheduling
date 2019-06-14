@@ -53,6 +53,7 @@ struct proc {
   int times_chosen;            // Times that proc wins the cpu
   int stride;                  // Sum of current strides from a process
   int nStride;                 // Value of stride
+  int heapindex;
 };
 
 // Process memory is laid out contiguously, low addresses first:

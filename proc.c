@@ -7,6 +7,80 @@
 #include "proc.h"
 #include "spinlock.h"
 
+// inicio implementação heap
+#define LEFT (i*2)+1
+#define RIGHT (i*2)+2
+#define PARENT (i-1)/2
+
+int next=0;
+struct proc heap[NPROC];
+
+void sort_up(int i){
+    while(heap[PARENT].stride > heap[i].stride){
+        int idx_parent = heap[PARENT].heapindex, idx_son = heap[i].heapindex;        
+        struct proc aux = heap[i];
+
+        heap[i] = heap[PARENT];
+        heap[i].heapindex = idx_son;
+
+        heap[PARENT] = aux;
+        heap[PARENT].heapindex = idx_parent;
+        
+        if(PARENT <= 0)
+            return;
+        i = PARENT;
+    }
+}
+
+void sort_down(int i){
+    while(i < next){
+        int leftexists, rightexists, lower_son;
+        struct proc left, right;
+        leftexists  = LEFT  >= next ? 0 : 1;
+        rightexists = RIGHT >= next ? 0 : 1;
+
+        if(!(leftexists || rightexists)) return;
+
+        left  = leftexists  ? heap[LEFT]  : heap[PARENT];
+        right = rightexists ? heap[RIGHT] : heap[PARENT];
+
+        lower_son = left.stride <= right.stride ? LEFT : RIGHT;
+        if(heap[lower_son].stride < heap[i].stride){
+            struct proc aux = heap[lower_son];
+            int idx_parent = heap[i].heapindex, idx_son = heap[lower_son].heapindex;                 
+            
+            heap[lower_son] = heap[i];
+            heap[lower_son].heapindex = idx_son;
+            
+            heap[i] = aux;
+            heap[i].heapindex = idx_parent;
+            i = lower_son;
+        }
+        else
+            break;
+        
+    }
+}
+
+void insert(struct proc value){
+    heap[next] = value;
+    value.heapindex = next;
+    sort_up(next);
+    (next)++;    
+    return;
+}
+
+void take(int i){
+    if(next > 0){
+        heap[i] = heap[next-1];
+        next--;
+        sort_down(i);
+        sort_up(i);
+    }else 
+        return;
+}
+// fim implementação heap
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -153,6 +227,7 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
+  insert(*p);
 
   release(&ptable.lock);
 }
@@ -218,6 +293,7 @@ fork(int tickets){
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
+  insert(*np);
 
   release(&ptable.lock);
 
@@ -298,6 +374,7 @@ wait(void)
         p->name[0] = 0;
         p->killed = 0;
         p->state = UNUSED;
+        take(p->heapindex);
         release(&ptable.lock);
         return pid;
       }
@@ -361,6 +438,7 @@ scheduler(void)
       c->proc = pChosen;
       switchuvm(pChosen);
       pChosen->state = RUNNING;
+      take(pChosen->heapindex);
       swtch(&(c->scheduler), pChosen->context);
       switchkvm();
 
@@ -456,6 +534,7 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
+  take(p->heapindex);
 
   sched();
 
@@ -478,8 +557,10 @@ wakeup1(void *chan)
   struct proc *p;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
+    if(p->state == SLEEPING && p->chan == chan){
       p->state = RUNNABLE;
+      insert(*p);
+    }
 }
 
 // Wake up all processes sleeping on chan.
@@ -504,8 +585,11 @@ kill(int pid)
     if(p->pid == pid){
       p->killed = 1;
       // Wake process from sleep if necessary.
-      if(p->state == SLEEPING)
+      if(p->state == SLEEPING){
         p->state = RUNNABLE;
+        insert(*p);
+      }
+        
       release(&ptable.lock);
       return 0;
     }
@@ -551,6 +635,10 @@ procdump(void)
         cprintf(" %p", pc[i]);
     }
     */
+    cprintf("\n");
+    cprintf("next=%d\nheap:", next);
+    for(int i = 0; i < next; i++)
+      cprintf("[%d]", heap[i].stride);
     cprintf("\n");
   }
   cprintf("--------------------------------------------------------\n\n");

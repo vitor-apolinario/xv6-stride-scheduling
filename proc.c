@@ -65,7 +65,7 @@ void sort_down(int i){
 void insert(struct proc value){
     heap[next] = value;
     value.heapindex = next;
-    sort_up(next);
+    //sort_up(next);
     (next)++;    
     return;
 }
@@ -292,6 +292,7 @@ fork(int tickets){
 
   acquire(&ptable.lock);
 
+  cprintf("inserido");
   np->state = RUNNABLE;
   insert(*np);
 
@@ -636,10 +637,10 @@ procdump(void)
     }
     */
     cprintf("\n");
-    cprintf("next=%d\nheap:", next);
-    for(int i = 0; i < next; i++)
-      cprintf("[%d]", heap[i].stride);
-    cprintf("\n");
   }
+  cprintf("next=%d\nheap:", next);
+  for(int i = 0; i < next; i++)
+    cprintf("[pid:%d, strd:%d]", heap[i].pid, heap[i].stride);
+  cprintf("\n");
   cprintf("--------------------------------------------------------\n\n");
 }

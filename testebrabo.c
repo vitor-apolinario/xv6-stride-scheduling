@@ -6,8 +6,8 @@ void
 ocupacpu(void)
 {
     int i, pid;
-    for(i = 1; i < 5; i++){
-        pid = fork(i*10);
+    for(i = 1; i < 10; i++){
+        pid = fork((i*10)+2);
         if(pid == 0)
             for(;;);
     }            

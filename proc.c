@@ -17,18 +17,20 @@ struct proc *heap[NPROC];
 
 void sort_up(int i){
     while(heap[PARENT]->stride > heap[i]->stride){
-        int idx_parent = heap[PARENT]->heapindex, idx_son = heap[i]->heapindex;        
-        struct proc *aux = heap[i];
+      cprintf("p[%d][%d]-s[%d][%d]\n",heap[PARENT]->pid, heap[PARENT]->nStride, heap[i]->pid, heap[i]->nStride);
+      int idx_parent = heap[PARENT]->heapindex, idx_son = heap[i]->heapindex;        
+      struct proc *son = heap[i];
+      struct proc *parent = heap[PARENT];
 
-        heap[i] = heap[PARENT];
-        heap[i]->heapindex = idx_son;
+      heap[i] = parent;
+      parent->heapindex = idx_son;
 
-        heap[PARENT] = aux;
-        heap[PARENT]->heapindex = idx_parent;
-        
-        if(PARENT <= 0)
-            return;
-        i = PARENT;
+      heap[PARENT] = son;
+      son->heapindex = idx_parent;
+      
+      if(PARENT <= 0)
+          return;
+      i = PARENT;
     }
 }
 
@@ -72,12 +74,13 @@ void insert(struct proc *value){
 
 void take(int i){
     if(next > 0){
+        heap[i]->heapindex = -1;
         heap[i] = heap[next-1];
         next--;
         sort_down(i);
         sort_up(i);
-    }else 
-        return;
+    }
+    return;
 }
 // fim implementação heap
 
@@ -165,7 +168,8 @@ found:
   p->tickets = tickets;
   p->stride = 0;
   p->times_chosen = 0;
-  p->nStride = 10000 / tickets;
+  p->nStride = p->stride = (1000 / tickets);
+  p->heapindex = -1;
 
   release(&ptable.lock);
 
@@ -436,7 +440,7 @@ scheduler(void)
       pChosen->times_chosen++;
       c->proc = pChosen;
       switchuvm(pChosen);
-      take(pChosen->heapindex);
+      // take(pChosen->heapindex);
       pChosen->state = RUNNING;
       swtch(&(c->scheduler), pChosen->context);
       switchkvm();
@@ -482,7 +486,7 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   myproc()->state = RUNNABLE;
-  insert(myproc());
+  // insert(myproc());
   sched();
   release(&ptable.lock);
 }
@@ -533,8 +537,8 @@ sleep(void *chan, struct spinlock *lk)
   }
   // Go to sleep.
   p->chan = chan;
-  if(heap[p->heapindex] == p) take(p->heapindex);
   p->state = SLEEPING;
+  if(heap[p->heapindex] == p) take(p->heapindex);
 
   sched();
 
@@ -559,7 +563,6 @@ wakeup1(void *chan)
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan){
       p->state = RUNNABLE;
-      insert(p);
     }
 }
 
@@ -587,7 +590,6 @@ kill(int pid)
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING){
         p->state = RUNNABLE;
-        insert(p);
       }
         
       release(&ptable.lock);
@@ -639,7 +641,7 @@ procdump(void)
   }
   cprintf("next=%d\nheap:", next);
   for(int i = 0; i < next; i++)
-    cprintf("[pid:%d, strd:%d st:%d]", heap[i]->pid, heap[i]->stride, heap[i]->state);
+    cprintf("\n[pid:%d, nstrd:%d st:%d hdx:%d]", heap[i]->pid, heap[i]->nStride, heap[i]->state, heap[i]->heapindex);
   cprintf("\n");
   cprintf("--------------------------------------------------------\n\n");
 }

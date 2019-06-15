@@ -46,13 +46,13 @@ void sort_down(int i){
 
         lower_son = left->stride <= right->stride ? LEFT : RIGHT;
         if(heap[lower_son]->stride < heap[i]->stride){
-            struct proc aux = *heap[lower_son];
+            struct proc *aux = heap[lower_son];
             int idx_parent = heap[i]->heapindex, idx_son = heap[lower_son]->heapindex;                 
             
             heap[lower_son] = heap[i];
             heap[lower_son]->heapindex = idx_son;
             
-            *heap[i] = aux;
+            heap[i] = aux;
             heap[i]->heapindex = idx_parent;
             i = lower_son;
         }
@@ -436,7 +436,7 @@ scheduler(void)
       pChosen->times_chosen++;
       c->proc = pChosen;
       switchuvm(pChosen);
-      if(pChosen->state == RUNNABLE) take(pChosen->heapindex);
+      take(pChosen->heapindex);
       pChosen->state = RUNNING;
       swtch(&(c->scheduler), pChosen->context);
       switchkvm();
@@ -533,7 +533,7 @@ sleep(void *chan, struct spinlock *lk)
   }
   // Go to sleep.
   p->chan = chan;
-  if(p->state == RUNNABLE) take(p->heapindex);
+  if(heap[p->heapindex] == p) take(p->heapindex);
   p->state = SLEEPING;
 
   sched();
@@ -639,7 +639,7 @@ procdump(void)
   }
   cprintf("next=%d\nheap:", next);
   for(int i = 0; i < next; i++)
-    cprintf("[pid:%d, strd:%d]", heap[i]->pid, heap[i]->stride);
+    cprintf("[pid:%d, strd:%d st:%d]", heap[i]->pid, heap[i]->stride, heap[i]->state);
   cprintf("\n");
   cprintf("--------------------------------------------------------\n\n");
 }

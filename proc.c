@@ -65,7 +65,7 @@ void sort_down(int i){
 void insert(struct proc value){
     heap[next] = value;
     value.heapindex = next;
-    //sort_up(next);
+    sort_up(next);
     (next)++;    
     return;
 }
@@ -292,7 +292,6 @@ fork(int tickets){
 
   acquire(&ptable.lock);
 
-  cprintf("inserido");
   np->state = RUNNABLE;
   insert(*np);
 
@@ -375,7 +374,6 @@ wait(void)
         p->name[0] = 0;
         p->killed = 0;
         p->state = UNUSED;
-        take(p->heapindex);
         release(&ptable.lock);
         return pid;
       }
@@ -438,8 +436,8 @@ scheduler(void)
       pChosen->times_chosen++;
       c->proc = pChosen;
       switchuvm(pChosen);
+      if(pChosen->state == RUNNABLE) take(pChosen->heapindex);
       pChosen->state = RUNNING;
-      take(pChosen->heapindex);
       swtch(&(c->scheduler), pChosen->context);
       switchkvm();
 
@@ -484,6 +482,7 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   myproc()->state = RUNNABLE;
+  insert(*myproc());
   sched();
   release(&ptable.lock);
 }
@@ -534,8 +533,8 @@ sleep(void *chan, struct spinlock *lk)
   }
   // Go to sleep.
   p->chan = chan;
+  if(p->state == RUNNABLE) take(p->heapindex);
   p->state = SLEEPING;
-  take(p->heapindex);
 
   sched();
 
@@ -628,7 +627,7 @@ procdump(void)
     else
       state = "???";
     
-    cprintf("%d %s tkts:%d strides:%d esc:%d", p->pid, state, p->tickets,p->stride, p->times_chosen);
+    cprintf("%d %s tkts:%d strides:%d esc:%d hdx:%d", p->pid, state, p->tickets,p->stride, p->times_chosen, p->heapindex);
     /*
     if(p->state == SLEEPING){
       getcallerpcs((uint*)p->context->ebp+2, pc);

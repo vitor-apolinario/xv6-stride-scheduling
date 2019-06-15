@@ -13,18 +13,18 @@
 #define PARENT (i-1)/2
 
 int next=0;
-struct proc heap[NPROC];
+struct proc *heap[NPROC];
 
 void sort_up(int i){
-    while(heap[PARENT].stride > heap[i].stride){
-        int idx_parent = heap[PARENT].heapindex, idx_son = heap[i].heapindex;        
-        struct proc aux = heap[i];
+    while(heap[PARENT]->stride > heap[i]->stride){
+        int idx_parent = heap[PARENT]->heapindex, idx_son = heap[i]->heapindex;        
+        struct proc *aux = heap[i];
 
         heap[i] = heap[PARENT];
-        heap[i].heapindex = idx_son;
+        heap[i]->heapindex = idx_son;
 
         heap[PARENT] = aux;
-        heap[PARENT].heapindex = idx_parent;
+        heap[PARENT]->heapindex = idx_parent;
         
         if(PARENT <= 0)
             return;
@@ -35,7 +35,7 @@ void sort_up(int i){
 void sort_down(int i){
     while(i < next){
         int leftexists, rightexists, lower_son;
-        struct proc left, right;
+        struct proc *left, *right;
         leftexists  = LEFT  >= next ? 0 : 1;
         rightexists = RIGHT >= next ? 0 : 1;
 
@@ -44,16 +44,16 @@ void sort_down(int i){
         left  = leftexists  ? heap[LEFT]  : heap[PARENT];
         right = rightexists ? heap[RIGHT] : heap[PARENT];
 
-        lower_son = left.stride <= right.stride ? LEFT : RIGHT;
-        if(heap[lower_son].stride < heap[i].stride){
-            struct proc aux = heap[lower_son];
-            int idx_parent = heap[i].heapindex, idx_son = heap[lower_son].heapindex;                 
+        lower_son = left->stride <= right->stride ? LEFT : RIGHT;
+        if(heap[lower_son]->stride < heap[i]->stride){
+            struct proc aux = *heap[lower_son];
+            int idx_parent = heap[i]->heapindex, idx_son = heap[lower_son]->heapindex;                 
             
             heap[lower_son] = heap[i];
-            heap[lower_son].heapindex = idx_son;
+            heap[lower_son]->heapindex = idx_son;
             
-            heap[i] = aux;
-            heap[i].heapindex = idx_parent;
+            *heap[i] = aux;
+            heap[i]->heapindex = idx_parent;
             i = lower_son;
         }
         else
@@ -62,9 +62,9 @@ void sort_down(int i){
     }
 }
 
-void insert(struct proc value){
+void insert(struct proc *value){
     heap[next] = value;
-    value.heapindex = next;
+    value->heapindex = next;
     sort_up(next);
     (next)++;    
     return;
@@ -227,7 +227,7 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
-  insert(*p);
+  insert(p);
 
   release(&ptable.lock);
 }
@@ -293,7 +293,7 @@ fork(int tickets){
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
-  insert(*np);
+  insert(np);
 
   release(&ptable.lock);
 
@@ -482,7 +482,7 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   myproc()->state = RUNNABLE;
-  insert(*myproc());
+  insert(myproc());
   sched();
   release(&ptable.lock);
 }
@@ -559,7 +559,7 @@ wakeup1(void *chan)
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan){
       p->state = RUNNABLE;
-      insert(*p);
+      insert(p);
     }
 }
 
@@ -587,7 +587,7 @@ kill(int pid)
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING){
         p->state = RUNNABLE;
-        insert(*p);
+        insert(p);
       }
         
       release(&ptable.lock);
@@ -639,7 +639,7 @@ procdump(void)
   }
   cprintf("next=%d\nheap:", next);
   for(int i = 0; i < next; i++)
-    cprintf("[pid:%d, strd:%d]", heap[i].pid, heap[i].stride);
+    cprintf("[pid:%d, strd:%d]", heap[i]->pid, heap[i]->stride);
   cprintf("\n");
   cprintf("--------------------------------------------------------\n\n");
 }

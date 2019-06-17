@@ -73,15 +73,13 @@ void insert(struct proc *value){
 }
 
 void take(int i){
-    if(next > 0){
-        heap[i]->heapindex = -1;
-        heap[i] = heap[next-1];
-        heap[i]->heapindex = i;
-        next--;
-        sort_down(i);
-        sort_up(i);
-    }
-    return;
+  heap[i]->heapindex = -1;
+  heap[i] = heap[next-1];
+  heap[i]->heapindex = i;
+  next--;
+  sort_up(i);
+  sort_down(i);
+  return;
 }
 // fim implementação heap
 
@@ -421,14 +419,13 @@ scheduler(void)
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
-    if(next>-1){
+    if(next>0){
       pChosen = heap[0];
       take(0);
       pChosen->stride += pChosen->nStride;
       pChosen->times_chosen++;
       c->proc = pChosen;
       switchuvm(pChosen);
-      // take(pChosen->heapindex);
       pChosen->state = RUNNING;
       swtch(&(c->scheduler), pChosen->context);
       switchkvm();

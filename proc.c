@@ -167,7 +167,7 @@ found:
   p->tickets = tickets;
   p->stride = 0;
   p->times_chosen = 0;
-  p->nStride = p->stride = (10000 / tickets);
+  p->nStride = p->stride = (1000 / tickets);
   p->heapindex = -1;
 
   release(&ptable.lock);
@@ -393,6 +393,12 @@ wait(void)
   }
 }
 
+void biggerThanInt(){
+  struct proc *p;
+  for(p = ptable.proc ; p<&ptable.proc[NPROC] ; p++)
+    p->stride = p->nStride;
+}
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -423,6 +429,8 @@ scheduler(void)
       pChosen = heap[0];
       take(0);
       pChosen->stride += pChosen->nStride;
+      if(pChosen->stride < 0)
+        biggerThanInt();
       pChosen->times_chosen++;
       c->proc = pChosen;
       switchuvm(pChosen);

@@ -6,12 +6,14 @@ void
 ocupacpu(void)
 {
     int i, pid;
-    for(i = 1; i < 10; i++){
-        pid = fork((i*10)+2);
+    for(i = 1; i < 2; i++){
+        pid = fork((i*10));
         if(pid == 0)
             for(;;);
     }            
-    exit();
+    while(1){
+        pid = wait();
+    }
 }
 
 int

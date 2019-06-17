@@ -17,7 +17,7 @@ struct proc *heap[NPROC];
 
 void sort_up(int i){
     while(heap[PARENT]->stride > heap[i]->stride){
-      cprintf("p[%d][%d]-s[%d][%d]\n",heap[PARENT]->pid, heap[PARENT]->nStride, heap[i]->pid, heap[i]->nStride);
+      //cprintf("p[%d][%d]-s[%d][%d]\n",heap[PARENT]->pid, heap[PARENT]->nStride, heap[i]->pid, heap[i]->nStride);
       int idx_parent = heap[PARENT]->heapindex, idx_son = heap[i]->heapindex;        
       struct proc *son = heap[i];
       struct proc *parent = heap[PARENT];
@@ -34,7 +34,7 @@ void sort_up(int i){
     }
 }
 
-void sort_down(int i){
+void sort_down(int i){    
     while(i < next){
         int leftexists, rightexists, lower_son;
         struct proc *left, *right;
@@ -76,6 +76,7 @@ void take(int i){
     if(next > 0){
         heap[i]->heapindex = -1;
         heap[i] = heap[next-1];
+        heap[i]->heapindex = i;
         next--;
         sort_down(i);
         sort_up(i);
@@ -168,7 +169,7 @@ found:
   p->tickets = tickets;
   p->stride = 0;
   p->times_chosen = 0;
-  p->nStride = p->stride = (1000 / tickets);
+  p->nStride = p->stride = (10000 / tickets);
   p->heapindex = -1;
 
   release(&ptable.lock);
@@ -405,8 +406,7 @@ wait(void)
 void
 scheduler(void)
 {
-  int flag = 1;
-  struct proc *p;
+//  struct proc *p;
   struct proc *pChosen;
   struct cpu *c = mycpu();
   c->proc = 0;
@@ -418,24 +418,12 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
 
-    
-
-    // busca o processo com o menor stride e seu pid
-    for(p = pChosen = ptable.proc, flag = -1; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE) continue;
-
-      if(flag){
-        flag = 0;
-        pChosen  = p;
-      }else if(p->stride < pChosen->stride){
-        pChosen = p;
-      }        
-    }
-    
-    // Switch to chosen process.  It is the process's job
-    // to release ptable.lock and then reacquire it
-    // before jumping back to us.
-    if(!flag){
+      // Switch to chosen process.  It is the process's job
+      // to release ptable.lock and then reacquire it
+      // before jumping back to us.
+    if(next>-1){
+      pChosen = heap[0];
+      take(0);
       pChosen->stride += pChosen->nStride;
       pChosen->times_chosen++;
       c->proc = pChosen;
@@ -444,13 +432,11 @@ scheduler(void)
       pChosen->state = RUNNING;
       swtch(&(c->scheduler), pChosen->context);
       switchkvm();
-
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
-    }
+    } 
     release(&ptable.lock);
-
   }
 }
 
@@ -486,7 +472,7 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   myproc()->state = RUNNABLE;
-  // insert(myproc());
+  insert(myproc());
   sched();
   release(&ptable.lock);
 }
@@ -537,9 +523,10 @@ sleep(void *chan, struct spinlock *lk)
   }
   // Go to sleep.
   p->chan = chan;
+  if(p->state == RUNNABLE)
+    take(p->heapindex);
   p->state = SLEEPING;
-  if(heap[p->heapindex] == p) take(p->heapindex);
-
+  
   sched();
 
   // Tidy up.
@@ -563,6 +550,7 @@ wakeup1(void *chan)
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan){
       p->state = RUNNABLE;
+      insert(p);
     }
 }
 
@@ -590,7 +578,8 @@ kill(int pid)
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING){
         p->state = RUNNABLE;
-      }
+      }else
+        take(p->heapindex);
         
       release(&ptable.lock);
       return 0;
@@ -640,8 +629,8 @@ procdump(void)
     cprintf("\n");
   }
   cprintf("next=%d\nheap:", next);
-  for(int i = 0; i < next; i++)
-    cprintf("\n[pid:%d, nstrd:%d st:%d hdx:%d]", heap[i]->pid, heap[i]->nStride, heap[i]->state, heap[i]->heapindex);
+  for(int i = 0; i < next; i++) 
+    cprintf("\n[pid:%d, nstrd:%d st:%d hdx:%d]", heap[i]->pid, heap[i]->stride, heap[i]->state, heap[i]->heapindex);
   cprintf("\n");
   cprintf("--------------------------------------------------------\n\n");
 }
